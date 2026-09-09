@@ -526,6 +526,22 @@ function toggleStatus(id){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
   const nowDone = job.status !== 'selesai';
+
+  // PT Perorangan & NPWP bukan tahap akhir — begitu ditandai "selesai",
+  // otomatis lanjut jadi NIB di baris yang sama, biar ga perlu input dua data terpisah.
+  if(nowDone && (job.jenis === 'PT Perorangan' || job.jenis === 'NPWP')){
+    const lanjut = confirm(`${job.nama} akan lanjut ke tahap NIB (bukan ditandai tuntas). Lanjutkan?`);
+    if(!lanjut) return;
+    const migrated = Object.assign({}, job, {
+      jenis: 'NIB',
+      status: 'proses',
+      tanggalSelesai: ''
+    });
+    callScript({ action:'update', job: migrated });
+    showToast(`${job.nama} lanjut ke tahap NIB`);
+    return;
+  }
+
   const updated = Object.assign({}, job, {
     status: nowDone ? 'selesai' : 'proses',
     tanggalSelesai: nowDone ? todayStr() : ''
