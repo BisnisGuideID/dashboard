@@ -115,7 +115,7 @@
   <header>
     <div>
       <div class="eyebrow">Tracker Pengerjaan</div>
-      <h1>RAZAN AHMAD ZHARFAN</h1>
+      <h1>Razan Ahmad Zharfan</h1>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-ghost" onclick="openConfig()">Ganti Sheet</button>
@@ -304,6 +304,8 @@ const JENIS_COLOR = {
   "NIB": "#4F8A78", "NPWP": "#6B7FB0", "PT Perorangan": "#C98A3B",
   "PKP": "#A6604C", "Logo": "#7A8B5A", "Lainnya": "#8B94A0"
 };
+const JENISPT_COLOR = { "PMDN": "#3E7CB1", "PMA": "#B1673E" };
+const SKALAPT_COLOR = { "Mikro": "#5B8C5A", "Kecil": "#4F8AA6", "Menengah": "#C9A23B", "Besar": "#B14F4F" };
 const JENIS_OPTIONS = Object.keys(JENIS_COLOR);
 
 let quickFilter = null; // null | 'hariIni' | 'bulanIni' | 'proses'
@@ -551,9 +553,10 @@ function renderTable(){
           <div class="row-top">
             <span class="row-nama">${escapeHtml(j.nama)}</span>
             <span class="badge" style="background:${color}26; color:${color};">${escapeHtml(j.jenis)}</span>
+            ${j.jenisPt ? `<span class="badge" style="background:${(JENISPT_COLOR[j.jenisPt]||'#8B94A0')}26; color:${JENISPT_COLOR[j.jenisPt]||'#8B94A0'};">${escapeHtml(j.jenisPt)}</span>` : ''}
+            ${j.skalaPt ? `<span class="badge" style="background:${(SKALAPT_COLOR[j.skalaPt]||'#8B94A0')}26; color:${SKALAPT_COLOR[j.skalaPt]||'#8B94A0'};">${escapeHtml(j.skalaPt)}</span>` : ''}
           </div>
           <div class="row-dates mono">${dates}</div>
-          ${(j.jenisPt || j.skalaPt) ? `<div class="row-dates">${[j.jenisPt, j.skalaPt].filter(Boolean).join(' · ')}</div>` : ''}
           ${j.catatan ? `<div class="row-catatan">${escapeHtml(j.catatan)}</div>` : ''}
           ${hasOss ? `
             <div class="creds-row">
