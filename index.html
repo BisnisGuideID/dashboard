@@ -459,7 +459,6 @@ function renderChart(){
 
   const monthLabel = new Date(monthCursor+"-01T00:00:00").toLocaleDateString("id-ID",{month:"long",year:"numeric"});
   document.getElementById('monthLabel').textContent = monthLabel;
-  document.getElementById('statBulanLabel').textContent = (monthCursor === todayStr().slice(0,7)) ? 'Selesai bulan ini' : 'Selesai ' + monthLabel;
 
   const ctx = document.getElementById('chart').getContext('2d');
   if(chartInstance){
