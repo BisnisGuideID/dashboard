@@ -175,12 +175,12 @@
         <input id="fNama" placeholder="Nama klien / usaha" />
       </label>
       <label>Jenis layanan
-        <select id="fJenis" onchange="toggleJenisCustom()">
+        <select id="fJenis" onchange="onJenisChange()">
           <option>NIB</option>
-          <option>PT Perorangan</option>
           <option>NPWP</option>
-          <option>PT PMA</option>
-          <option>CV</option>
+          <option>PT Perorangan</option>
+          <option>PKP</option>
+          <option>Logo</option>
           <option>Lainnya</option>
         </select>
       </label>
@@ -196,13 +196,17 @@
           <option value="selesai">Selesai</option>
         </select>
       </label>
-      <div class="full" style="border-top: 1px solid var(--border); margin: 4px 0;"></div>
-      <label>User OSS
-        <input id="fOssUser" placeholder="username OSS" />
-      </label>
-      <label>Password OSS
-        <input id="fOssPass" placeholder="password OSS" />
-      </label>
+      <div class="full" id="ossSection">
+        <div style="border-top: 1px solid var(--border); margin: 4px 0 12px;"></div>
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; padding: 0;">
+          <label>User OSS
+            <input id="fOssUser" placeholder="username OSS" />
+          </label>
+          <label>Password OSS
+            <input id="fOssPass" placeholder="password OSS" />
+          </label>
+        </div>
+      </div>
       <label class="full">Catatan
         <textarea id="fCatatan" style="min-height:60px; resize:vertical;" placeholder="mis. nunggu KTP klien"></textarea>
       </label>
@@ -218,8 +222,8 @@
 
 <script>
 const JENIS_COLOR = {
-  "NIB": "#4F8A78", "PT Perorangan": "#C98A3B", "NPWP": "#6B7FB0",
-  "PT PMA": "#A6604C", "CV": "#7A8B5A", "Lainnya": "#8B94A0"
+  "NIB": "#4F8A78", "NPWP": "#6B7FB0", "PT Perorangan": "#C98A3B",
+  "PKP": "#A6604C", "Logo": "#7A8B5A", "Lainnya": "#8B94A0"
 };
 const JENIS_OPTIONS = Object.keys(JENIS_COLOR);
 
@@ -480,6 +484,7 @@ function openForm(){
   document.getElementById('fJenis').value='NIB';
   document.getElementById('fJenisCustom').value='';
   document.getElementById('fJenisCustomWrap').classList.add('hidden');
+  document.getElementById('ossSection').classList.remove('hidden');
   document.getElementById('fTanggalMasuk').value=todayStr();
   document.getElementById('fStatus').value='proses';
   document.getElementById('fOssUser').value='';
@@ -489,9 +494,10 @@ function openForm(){
 }
 function closeForm(){ document.getElementById('formOverlay').classList.add('hidden'); }
 
-function toggleJenisCustom(){
-  const isLainnya = document.getElementById('fJenis').value === 'Lainnya';
-  document.getElementById('fJenisCustomWrap').classList.toggle('hidden', !isLainnya);
+function onJenisChange(){
+  const jenis = document.getElementById('fJenis').value;
+  document.getElementById('fJenisCustomWrap').classList.toggle('hidden', jenis !== 'Lainnya');
+  document.getElementById('ossSection').classList.toggle('hidden', jenis !== 'NIB');
 }
 
 function submitForm(){
