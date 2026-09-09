@@ -207,6 +207,17 @@
           </label>
         </div>
       </div>
+      <div class="full hidden" id="coretaxSection">
+        <div style="border-top: 1px solid var(--border); margin: 4px 0 12px;"></div>
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; padding: 0;">
+          <label>User Coretax
+            <input id="fCoretaxUser" placeholder="username Coretax" />
+          </label>
+          <label>Password Coretax
+            <input id="fCoretaxPass" placeholder="password Coretax" />
+          </label>
+        </div>
+      </div>
       <label class="full">Catatan
         <textarea id="fCatatan" style="min-height:60px; resize:vertical;" placeholder="mis. nunggu KTP klien"></textarea>
       </label>
@@ -416,8 +427,10 @@ function renderTable(){
     const color = JENIS_COLOR[j.jenis] || '#8B94A0';
     const isDone = j.status==='selesai';
     const dates = `Masuk ${fmtTanggal(j.tanggalMasuk)}` + (isDone ? ` · Selesai ${fmtTanggal(j.tanggalSelesai)}` : '');
-    const hasCreds = j.ossUser || j.ossPass;
-    const pwShown = visiblePw[j.id];
+    const hasOss = j.ossUser || j.ossPass;
+    const hasCoretax = j.coretaxUser || j.coretaxPass;
+    const ossShown = visiblePw[j.id+':oss'];
+    const coretaxShown = visiblePw[j.id+':coretax'];
     return `
       <div class="row">
         <button class="row-status" onclick="toggleStatus('${j.id}')" title="Tandai selesai/proses">
@@ -430,11 +443,18 @@ function renderTable(){
           </div>
           <div class="row-dates mono">${dates}</div>
           ${j.catatan ? `<div class="row-catatan">${escapeHtml(j.catatan)}</div>` : ''}
-          ${hasCreds ? `
+          ${hasOss ? `
             <div class="creds-row">
-              <span class="creds-text mono">${escapeHtml(j.ossUser||'-')} / ${pwShown ? escapeHtml(j.ossPass||'-') : '••••••••'}</span>
-              <button class="icon-btn" onclick="togglePw('${j.id}')" title="Tampilkan/sembunyikan">${pwShown ? '🙈' : '👁'}</button>
-              <button class="icon-btn" onclick="copyCreds('${j.id}')" title="Salin">⧉</button>
+              <span class="creds-text mono">OSS: ${escapeHtml(j.ossUser||'-')} / ${ossShown ? escapeHtml(j.ossPass||'-') : '••••••••'}</span>
+              <button class="icon-btn" onclick="togglePw('${j.id}','oss')" title="Tampilkan/sembunyikan">${ossShown ? '🙈' : '👁'}</button>
+              <button class="icon-btn" onclick="copyCreds('${j.id}','oss')" title="Salin">⧉</button>
+            </div>
+          ` : ''}
+          ${hasCoretax ? `
+            <div class="creds-row">
+              <span class="creds-text mono">Coretax: ${escapeHtml(j.coretaxUser||'-')} / ${coretaxShown ? escapeHtml(j.coretaxPass||'-') : '••••••••'}</span>
+              <button class="icon-btn" onclick="togglePw('${j.id}','coretax')" title="Tampilkan/sembunyikan">${coretaxShown ? '🙈' : '👁'}</button>
+              <button class="icon-btn" onclick="copyCreds('${j.id}','coretax')" title="Salin">⧉</button>
             </div>
           ` : ''}
         </div>
@@ -450,15 +470,18 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-function togglePw(id){
-  visiblePw[id] = !visiblePw[id];
+function togglePw(id, type){
+  const key = id+':'+type;
+  visiblePw[key] = !visiblePw[key];
   renderTable();
 }
 
-function copyCreds(id){
+function copyCreds(id, type){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
-  const text = `User: ${job.ossUser}\nPassword: ${job.ossPass}`;
+  const user = type==='coretax' ? job.coretaxUser : job.ossUser;
+  const pass = type==='coretax' ? job.coretaxPass : job.ossPass;
+  const text = `User: ${user}\nPassword: ${pass}`;
   if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
   showToast('Disalin ke clipboard');
 }
@@ -485,6 +508,9 @@ function openForm(){
   document.getElementById('fJenisCustom').value='';
   document.getElementById('fJenisCustomWrap').classList.add('hidden');
   document.getElementById('ossSection').classList.remove('hidden');
+  document.getElementById('coretaxSection').classList.add('hidden');
+  document.getElementById('fCoretaxUser').value='';
+  document.getElementById('fCoretaxPass').value='';
   document.getElementById('fTanggalMasuk').value=todayStr();
   document.getElementById('fStatus').value='proses';
   document.getElementById('fOssUser').value='';
@@ -498,6 +524,7 @@ function onJenisChange(){
   const jenis = document.getElementById('fJenis').value;
   document.getElementById('fJenisCustomWrap').classList.toggle('hidden', jenis !== 'Lainnya');
   document.getElementById('ossSection').classList.toggle('hidden', jenis !== 'NIB');
+  document.getElementById('coretaxSection').classList.toggle('hidden', jenis !== 'PKP');
 }
 
 function submitForm(){
@@ -517,6 +544,8 @@ function submitForm(){
     status,
     ossUser: document.getElementById('fOssUser').value.trim(),
     ossPass: document.getElementById('fOssPass').value,
+    coretaxUser: document.getElementById('fCoretaxUser').value.trim(),
+    coretaxPass: document.getElementById('fCoretaxPass').value,
     catatan: document.getElementById('fCatatan').value.trim()
   };
   closeForm();
