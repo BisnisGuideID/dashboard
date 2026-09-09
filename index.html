@@ -261,24 +261,38 @@
   </div>
 </div>
 
+<div id="askPkpOverlay" class="overlay hidden" onclick="if(event.target===this) closeAskPkp()">
+  <div class="modal" style="max-width: 380px;">
+    <div class="modal-header">
+      <h2>Apakah PT ini PKP?</h2>
+      <button class="icon-btn" onclick="closeAskPkp()">✕</button>
+    </div>
+    <p style="color: var(--muted); font-size: 13px;" id="askPkpSubtitle"></p>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="answerPkp(false)">Tidak, selesai</button>
+      <button class="btn-primary" onclick="answerPkp(true)">Ya, PKP</button>
+    </div>
+  </div>
+</div>
+
 <div id="migrateOverlay" class="overlay hidden" onclick="if(event.target===this) closeMigrateModal()">
   <div class="modal" style="max-width: 420px;">
     <div class="modal-header">
-      <h2>Lanjut ke tahap NIB</h2>
+      <h2 id="migrateTitle">Lanjut ke tahap NIB</h2>
       <button class="icon-btn" onclick="closeMigrateModal()">✕</button>
     </div>
     <p style="color: var(--muted); font-size: 13px; margin-top: -8px;" id="migrateSubtitle"></p>
     <div class="form-grid">
-      <label class="full">User OSS
-        <input id="mOssUser" placeholder="username OSS" />
+      <label class="full" id="mUserLabel">User OSS
+        <input id="mCredUser" placeholder="username" />
       </label>
-      <label class="full">Password OSS
-        <input id="mOssPass" placeholder="password OSS" />
+      <label class="full" id="mPassLabel">Password OSS
+        <input id="mCredPass" placeholder="password" />
       </label>
     </div>
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeMigrateModal()">Batal</button>
-      <button class="btn-primary" onclick="submitMigrate()">Lanjutkan ke NIB</button>
+      <button class="btn-primary" id="migrateSubmitBtn" onclick="submitMigrate()">Lanjutkan ke NIB</button>
     </div>
   </div>
 </div>
@@ -611,17 +625,25 @@ function copyCreds(id, type){
 }
 
 let pendingMigrateId = null;
+let migrateTargetJenis = 'NIB';
+let migrateCredType = 'oss'; // 'oss' | 'coretax'
 
 function toggleStatus(id){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
   const nowDone = job.status !== 'selesai';
 
-  // PT Perorangan & NPWP bukan tahap akhir — begitu ditandai "selesai",
-  // otomatis lanjut jadi NIB di baris yang sama, sekalian minta akun OSS.
-  if(nowDone && (job.jenis === 'PT Perorangan' || job.jenis === 'NPWP')){
-    openMigrateModal(id);
-    return;
+  if(nowDone){
+    // PT Perorangan & NPWP bukan tahap akhir — lanjut jadi NIB, minta akun OSS.
+    if(job.jenis === 'PT Perorangan' || job.jenis === 'NPWP'){
+      openMigrateModal(id, 'NIB', 'oss');
+      return;
+    }
+    // NIB yang mau ditandai selesai — tanya dulu apakah PKP.
+    if(job.jenis === 'NIB'){
+      openAskPkp(id);
+      return;
+    }
   }
 
   const updated = Object.assign({}, job, {
@@ -631,13 +653,57 @@ function toggleStatus(id){
   callScript({ action:'update', job: updated });
 }
 
-function openMigrateModal(id){
+let pendingPkpId = null;
+
+function openAskPkp(id){
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  pendingPkpId = id;
+  document.getElementById('askPkpSubtitle').textContent = `${job.nama} — NIB rampung. Apakah PT ini termasuk PKP?`;
+  document.getElementById('askPkpOverlay').classList.remove('hidden');
+}
+
+function closeAskPkp(){
+  pendingPkpId = null;
+  document.getElementById('askPkpOverlay').classList.add('hidden');
+}
+
+function answerPkp(isPkp){
+  const id = pendingPkpId;
+  closeAskPkp();
+  if(!id) return;
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+
+  if(isPkp){
+    openMigrateModal(id, 'PKP', 'coretax');
+  } else {
+    const updated = Object.assign({}, job, { status:'selesai', tanggalSelesai: todayStr() });
+    callScript({ action:'update', job: updated });
+  }
+}
+
+function openMigrateModal(id, targetJenis, credType){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
   pendingMigrateId = id;
-  document.getElementById('migrateSubtitle').textContent = `${job.nama} — ${job.jenis} rampung, lanjut ke tahap NIB. Isi akun OSS-nya:`;
-  document.getElementById('mOssUser').value = job.ossUser || '';
-  document.getElementById('mOssPass').value = job.ossPass || '';
+  migrateTargetJenis = targetJenis;
+  migrateCredType = credType;
+
+  const credLabel = credType === 'coretax' ? 'Coretax' : 'OSS';
+  document.getElementById('migrateTitle').textContent = `Lanjut ke tahap ${targetJenis}`;
+  document.getElementById('migrateSubtitle').textContent = `${job.nama} — ${job.jenis} rampung, lanjut ke tahap ${targetJenis}. Isi akun ${credLabel}-nya:`;
+  document.getElementById('mUserLabel').firstChild.textContent = `User ${credLabel}`;
+  document.getElementById('mPassLabel').firstChild.textContent = `Password ${credLabel}`;
+  document.getElementById('mCredUser').placeholder = `username ${credLabel}`;
+  document.getElementById('mCredPass').placeholder = `password ${credLabel}`;
+  document.getElementById('migrateSubmitBtn').textContent = `Lanjutkan ke ${targetJenis}`;
+
+  const existingUser = credType === 'coretax' ? job.coretaxUser : job.ossUser;
+  const existingPass = credType === 'coretax' ? job.coretaxPass : job.ossPass;
+  document.getElementById('mCredUser').value = existingUser || '';
+  document.getElementById('mCredPass').value = existingPass || '';
+
   document.getElementById('migrateOverlay').classList.remove('hidden');
 }
 
@@ -649,16 +715,21 @@ function closeMigrateModal(){
 function submitMigrate(){
   const job = jobs.find(j=>j.id===pendingMigrateId);
   if(!job) return;
+  const credUser = document.getElementById('mCredUser').value.trim();
+  const credPass = document.getElementById('mCredPass').value;
+  const credFields = migrateCredType === 'coretax'
+    ? { coretaxUser: credUser, coretaxPass: credPass }
+    : { ossUser: credUser, ossPass: credPass };
+
   const migrated = Object.assign({}, job, {
-    jenis: 'NIB',
+    jenis: migrateTargetJenis,
     status: 'proses',
-    tanggalSelesai: '',
-    ossUser: document.getElementById('mOssUser').value.trim(),
-    ossPass: document.getElementById('mOssPass').value
-  });
+    tanggalSelesai: ''
+  }, credFields);
+
   closeMigrateModal();
   callScript({ action:'update', job: migrated });
-  showToast(`${job.nama} lanjut ke tahap NIB`);
+  showToast(`${job.nama} lanjut ke tahap ${migrateTargetJenis}`);
 }
 
 let pendingDeleteId = null;
