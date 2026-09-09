@@ -115,7 +115,7 @@
   <header>
     <div>
       <div class="eyebrow">Tracker Pengerjaan</div>
-      <h1>Razan Ahmad Zharfan</h1>
+      <h1>NIB · PT Perorangan · NPWP</h1>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-ghost" onclick="openConfig()">Ganti Sheet</button>
@@ -199,6 +199,22 @@
         <select id="fStatus">
           <option value="proses">Proses</option>
           <option value="selesai">Selesai</option>
+        </select>
+      </label>
+      <label>Jenis PT (opsional)
+        <select id="fJenisPt">
+          <option value="">-</option>
+          <option value="PMDN">PMDN</option>
+          <option value="PMA">PMA</option>
+        </select>
+      </label>
+      <label>Skala PT (opsional)
+        <select id="fSkalaPt">
+          <option value="">-</option>
+          <option value="Mikro">Mikro</option>
+          <option value="Kecil">Kecil</option>
+          <option value="Menengah">Menengah</option>
+          <option value="Besar">Besar</option>
         </select>
       </label>
       <div class="full" id="ossSection">
@@ -537,6 +553,7 @@ function renderTable(){
             <span class="badge" style="background:${color}26; color:${color};">${escapeHtml(j.jenis)}</span>
           </div>
           <div class="row-dates mono">${dates}</div>
+          ${(j.jenisPt || j.skalaPt) ? `<div class="row-dates">${[j.jenisPt, j.skalaPt].filter(Boolean).join(' · ')}</div>` : ''}
           ${j.catatan ? `<div class="row-catatan">${escapeHtml(j.catatan)}</div>` : ''}
           ${hasOss ? `
             <div class="creds-row">
@@ -677,6 +694,8 @@ function openForm(){
   document.getElementById('fAhuPass').value='';
   document.getElementById('fTanggalMasuk').value=todayStr();
   document.getElementById('fStatus').value='proses';
+  document.getElementById('fJenisPt').value='';
+  document.getElementById('fSkalaPt').value='';
   document.getElementById('fOssUser').value='';
   document.getElementById('fOssPass').value='';
   document.getElementById('fCatatan').value='';
@@ -707,6 +726,8 @@ function submitForm(){
     tanggalMasuk: document.getElementById('fTanggalMasuk').value || todayStr(),
     tanggalSelesai: status==='selesai' ? todayStr() : '',
     status,
+    jenisPt: document.getElementById('fJenisPt').value,
+    skalaPt: document.getElementById('fSkalaPt').value,
     ossUser: document.getElementById('fOssUser').value.trim(),
     ossPass: document.getElementById('fOssPass').value,
     coretaxUser: document.getElementById('fCoretaxUser').value.trim(),
