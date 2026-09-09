@@ -460,19 +460,26 @@ function renderChart(){
   document.getElementById('statBulanLabel').textContent = (monthCursor === todayStr().slice(0,7)) ? 'Selesai bulan ini' : 'Selesai ' + monthLabel;
 
   const ctx = document.getElementById('chart').getContext('2d');
-  if(chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, barThickness: 36 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { backgroundColor:'#1C222A', borderColor:'#2A323C', borderWidth:1, titleColor:'#E8EAED', bodyColor:'#E8EAED' } },
-      scales: {
-        x: { grid: { display:false, color:'#2A323C' }, ticks: { color:'#8B94A0', font:{size:12} } },
-        y: { beginAtZero:true, ticks: { color:'#8B94A0', font:{size:12}, precision:0 }, grid: { color:'#2A323C' } }
+  if(chartInstance){
+    chartInstance.data.labels = labels;
+    chartInstance.data.datasets[0].data = data;
+    chartInstance.data.datasets[0].backgroundColor = colors;
+    chartInstance.update('none');
+  } else {
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, barThickness: 36 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor:'#1C222A', borderColor:'#2A323C', borderWidth:1, titleColor:'#E8EAED', bodyColor:'#E8EAED' } },
+        scales: {
+          x: { grid: { display:false, color:'#2A323C' }, ticks: { color:'#8B94A0', font:{size:12} } },
+          y: { beginAtZero:true, ticks: { color:'#8B94A0', font:{size:12}, precision:0 }, grid: { color:'#2A323C' } }
+        }
       }
-    }
-  });
+    });
+  }
 }
 
 function renderTable(){
