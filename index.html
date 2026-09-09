@@ -261,16 +261,16 @@
   </div>
 </div>
 
-<div id="askPkpOverlay" class="overlay hidden" onclick="if(event.target===this) closeAskPkp()">
+<div id="askLanjutOverlay" class="overlay hidden" onclick="if(event.target===this) closeAskLanjut()">
   <div class="modal" style="max-width: 380px;">
     <div class="modal-header">
-      <h2>Apakah PT ini PKP?</h2>
-      <button class="icon-btn" onclick="closeAskPkp()">✕</button>
+      <h2 id="askLanjutTitle">Lanjut ke tahap berikutnya?</h2>
+      <button class="icon-btn" onclick="closeAskLanjut()">✕</button>
     </div>
-    <p style="color: var(--muted); font-size: 13px;" id="askPkpSubtitle"></p>
+    <p style="color: var(--muted); font-size: 13px;" id="askLanjutSubtitle"></p>
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="answerPkp(false)">Tidak, selesai</button>
-      <button class="btn-primary" onclick="answerPkp(true)">Ya, PKP</button>
+      <button class="btn-ghost" onclick="answerLanjut(false)">Tidak, selesai</button>
+      <button class="btn-primary" id="askLanjutYesBtn" onclick="answerLanjut(true)">Ya, lanjut</button>
     </div>
   </div>
 </div>
@@ -634,14 +634,16 @@ function toggleStatus(id){
   const nowDone = job.status !== 'selesai';
 
   if(nowDone){
-    // PT Perorangan & NPWP bukan tahap akhir — lanjut jadi NIB, minta akun OSS.
-    if(job.jenis === 'PT Perorangan' || job.jenis === 'NPWP'){
-      openMigrateModal(id, 'NIB', 'oss');
+    if(job.jenis === 'PT Perorangan'){
+      openAskLanjut(id, 'NIB', 'oss', `${job.nama} — PT Perorangan rampung. Apakah lanjut urus NIB?`);
       return;
     }
-    // NIB yang mau ditandai selesai — tanya dulu apakah PKP.
+    if(job.jenis === 'NPWP'){
+      openAskLanjut(id, 'NIB', 'oss', `${job.nama} — NPWP rampung. Apakah lanjut urus NIB?`);
+      return;
+    }
     if(job.jenis === 'NIB'){
-      openAskPkp(id);
+      openAskLanjut(id, 'PKP', 'coretax', `${job.nama} — NIB rampung. Apakah PT ini termasuk PKP?`);
       return;
     }
   }
@@ -653,30 +655,36 @@ function toggleStatus(id){
   callScript({ action:'update', job: updated });
 }
 
-let pendingPkpId = null;
+let pendingAskId = null;
+let pendingNextJenis = null;
+let pendingCredType = null;
 
-function openAskPkp(id){
-  const job = jobs.find(j=>j.id===id);
-  if(!job) return;
-  pendingPkpId = id;
-  document.getElementById('askPkpSubtitle').textContent = `${job.nama} — NIB rampung. Apakah PT ini termasuk PKP?`;
-  document.getElementById('askPkpOverlay').classList.remove('hidden');
+function openAskLanjut(id, nextJenis, credType, question){
+  pendingAskId = id;
+  pendingNextJenis = nextJenis;
+  pendingCredType = credType;
+  document.getElementById('askLanjutTitle').textContent = `Lanjut ke ${nextJenis}?`;
+  document.getElementById('askLanjutSubtitle').textContent = question;
+  document.getElementById('askLanjutYesBtn').textContent = `Ya, ${nextJenis}`;
+  document.getElementById('askLanjutOverlay').classList.remove('hidden');
 }
 
-function closeAskPkp(){
-  pendingPkpId = null;
-  document.getElementById('askPkpOverlay').classList.add('hidden');
+function closeAskLanjut(){
+  pendingAskId = null;
+  document.getElementById('askLanjutOverlay').classList.add('hidden');
 }
 
-function answerPkp(isPkp){
-  const id = pendingPkpId;
-  closeAskPkp();
+function answerLanjut(isYes){
+  const id = pendingAskId;
+  const nextJenis = pendingNextJenis;
+  const credType = pendingCredType;
+  closeAskLanjut();
   if(!id) return;
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
 
-  if(isPkp){
-    openMigrateModal(id, 'PKP', 'coretax');
+  if(isYes){
+    openMigrateModal(id, nextJenis, credType);
   } else {
     const updated = Object.assign({}, job, { status:'selesai', tanggalSelesai: todayStr() });
     callScript({ action:'update', job: updated });
