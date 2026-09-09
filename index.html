@@ -240,6 +240,42 @@
   </div>
 </div>
 
+<div id="migrateOverlay" class="overlay hidden" onclick="if(event.target===this) closeMigrateModal()">
+  <div class="modal" style="max-width: 420px;">
+    <div class="modal-header">
+      <h2>Lanjut ke tahap NIB</h2>
+      <button class="icon-btn" onclick="closeMigrateModal()">✕</button>
+    </div>
+    <p style="color: var(--muted); font-size: 13px; margin-top: -8px;" id="migrateSubtitle"></p>
+    <div class="form-grid">
+      <label class="full">User OSS
+        <input id="mOssUser" placeholder="username OSS" />
+      </label>
+      <label class="full">Password OSS
+        <input id="mOssPass" placeholder="password OSS" />
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeMigrateModal()">Batal</button>
+      <button class="btn-primary" onclick="submitMigrate()">Lanjutkan ke NIB</button>
+    </div>
+  </div>
+</div>
+
+<div id="deleteOverlay" class="overlay hidden" onclick="if(event.target===this) closeDeleteModal()">
+  <div class="modal" style="max-width: 380px;">
+    <div class="modal-header">
+      <h2>Hapus kerjaan?</h2>
+      <button class="icon-btn" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <p style="color: var(--muted); font-size: 13px;" id="deleteSubtitle"></p>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeDeleteModal()">Batal</button>
+      <button class="btn-primary" style="background: var(--danger); color: #fff;" onclick="confirmDelete()">Hapus</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
 <script>
@@ -522,23 +558,17 @@ function copyCreds(id, type){
   showToast('Disalin ke clipboard');
 }
 
+let pendingMigrateId = null;
+
 function toggleStatus(id){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
   const nowDone = job.status !== 'selesai';
 
   // PT Perorangan & NPWP bukan tahap akhir — begitu ditandai "selesai",
-  // otomatis lanjut jadi NIB di baris yang sama, biar ga perlu input dua data terpisah.
+  // otomatis lanjut jadi NIB di baris yang sama, sekalian minta akun OSS.
   if(nowDone && (job.jenis === 'PT Perorangan' || job.jenis === 'NPWP')){
-    const lanjut = confirm(`${job.nama} akan lanjut ke tahap NIB (bukan ditandai tuntas). Lanjutkan?`);
-    if(!lanjut) return;
-    const migrated = Object.assign({}, job, {
-      jenis: 'NIB',
-      status: 'proses',
-      tanggalSelesai: ''
-    });
-    callScript({ action:'update', job: migrated });
-    showToast(`${job.nama} lanjut ke tahap NIB`);
+    openMigrateModal(id);
     return;
   }
 
@@ -549,8 +579,55 @@ function toggleStatus(id){
   callScript({ action:'update', job: updated });
 }
 
+function openMigrateModal(id){
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  pendingMigrateId = id;
+  document.getElementById('migrateSubtitle').textContent = `${job.nama} — ${job.jenis} rampung, lanjut ke tahap NIB. Isi akun OSS-nya:`;
+  document.getElementById('mOssUser').value = job.ossUser || '';
+  document.getElementById('mOssPass').value = job.ossPass || '';
+  document.getElementById('migrateOverlay').classList.remove('hidden');
+}
+
+function closeMigrateModal(){
+  pendingMigrateId = null;
+  document.getElementById('migrateOverlay').classList.add('hidden');
+}
+
+function submitMigrate(){
+  const job = jobs.find(j=>j.id===pendingMigrateId);
+  if(!job) return;
+  const migrated = Object.assign({}, job, {
+    jenis: 'NIB',
+    status: 'proses',
+    tanggalSelesai: '',
+    ossUser: document.getElementById('mOssUser').value.trim(),
+    ossPass: document.getElementById('mOssPass').value
+  });
+  closeMigrateModal();
+  callScript({ action:'update', job: migrated });
+  showToast(`${job.nama} lanjut ke tahap NIB`);
+}
+
+let pendingDeleteId = null;
+
 function removeJob(id){
-  if(!confirm('Hapus kerjaan ini?')) return;
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  pendingDeleteId = id;
+  document.getElementById('deleteSubtitle').textContent = `"${job.nama}" (${job.jenis}) akan dihapus permanen dari Sheets.`;
+  document.getElementById('deleteOverlay').classList.remove('hidden');
+}
+
+function closeDeleteModal(){
+  pendingDeleteId = null;
+  document.getElementById('deleteOverlay').classList.add('hidden');
+}
+
+function confirmDelete(){
+  const id = pendingDeleteId;
+  closeDeleteModal();
+  if(!id) return;
   callScript({ action:'delete', id });
 }
 
