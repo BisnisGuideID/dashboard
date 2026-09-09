@@ -218,7 +218,18 @@
           </label>
         </div>
       </div>
-      <label class="full">Catatan
+      <div class="full hidden" id="ahuSection">
+        <div style="border-top: 1px solid var(--border); margin: 4px 0 12px;"></div>
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; padding: 0;">
+          <label>User AHU
+            <input id="fAhuUser" placeholder="username AHU" />
+          </label>
+          <label>Password AHU
+            <input id="fAhuPass" placeholder="password AHU" />
+          </label>
+        </div>
+      </div>
+      <label class="full">Catatan (opsional)
         <textarea id="fCatatan" style="min-height:60px; resize:vertical;" placeholder="mis. nunggu KTP klien"></textarea>
       </label>
     </div>
@@ -443,8 +454,10 @@ function renderTable(){
     const dates = `Masuk ${fmtTanggal(j.tanggalMasuk)}` + (isDone ? ` · Selesai ${fmtTanggal(j.tanggalSelesai)}` : '');
     const hasOss = j.ossUser || j.ossPass;
     const hasCoretax = j.coretaxUser || j.coretaxPass;
+    const hasAhu = j.ahuUser || j.ahuPass;
     const ossShown = visiblePw[j.id+':oss'];
     const coretaxShown = visiblePw[j.id+':coretax'];
+    const ahuShown = visiblePw[j.id+':ahu'];
     return `
       <div class="row">
         <button class="row-status" onclick="toggleStatus('${j.id}')" title="Tandai selesai/proses">
@@ -471,6 +484,13 @@ function renderTable(){
               <button class="icon-btn" onclick="copyCreds('${j.id}','coretax')" title="Salin">⧉</button>
             </div>
           ` : ''}
+          ${hasAhu ? `
+            <div class="creds-row">
+              <span class="creds-text mono">AHU: ${escapeHtml(j.ahuUser||'-')} / ${ahuShown ? escapeHtml(j.ahuPass||'-') : '••••••••'}</span>
+              <button class="icon-btn" onclick="togglePw('${j.id}','ahu')" title="Tampilkan/sembunyikan">${ahuShown ? '🙈' : '👁'}</button>
+              <button class="icon-btn" onclick="copyCreds('${j.id}','ahu')" title="Salin">⧉</button>
+            </div>
+          ` : ''}
         </div>
         <button class="delete-btn" onclick="removeJob('${j.id}')" title="Hapus">🗑</button>
       </div>
@@ -493,8 +513,10 @@ function togglePw(id, type){
 function copyCreds(id, type){
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
-  const user = type==='coretax' ? job.coretaxUser : job.ossUser;
-  const pass = type==='coretax' ? job.coretaxPass : job.ossPass;
+  let user, pass;
+  if(type==='coretax'){ user = job.coretaxUser; pass = job.coretaxPass; }
+  else if(type==='ahu'){ user = job.ahuUser; pass = job.ahuPass; }
+  else { user = job.ossUser; pass = job.ossPass; }
   const text = `User: ${user}\nPassword: ${pass}`;
   if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
   showToast('Disalin ke clipboard');
@@ -525,6 +547,9 @@ function openForm(){
   document.getElementById('coretaxSection').classList.add('hidden');
   document.getElementById('fCoretaxUser').value='';
   document.getElementById('fCoretaxPass').value='';
+  document.getElementById('ahuSection').classList.add('hidden');
+  document.getElementById('fAhuUser').value='';
+  document.getElementById('fAhuPass').value='';
   document.getElementById('fTanggalMasuk').value=todayStr();
   document.getElementById('fStatus').value='proses';
   document.getElementById('fOssUser').value='';
@@ -539,6 +564,7 @@ function onJenisChange(){
   document.getElementById('fJenisCustomWrap').classList.toggle('hidden', jenis !== 'Lainnya');
   document.getElementById('ossSection').classList.toggle('hidden', jenis !== 'NIB');
   document.getElementById('coretaxSection').classList.toggle('hidden', jenis !== 'PKP');
+  document.getElementById('ahuSection').classList.toggle('hidden', jenis !== 'PT Perorangan');
 }
 
 function submitForm(){
@@ -560,6 +586,8 @@ function submitForm(){
     ossPass: document.getElementById('fOssPass').value,
     coretaxUser: document.getElementById('fCoretaxUser').value.trim(),
     coretaxPass: document.getElementById('fCoretaxPass').value,
+    ahuUser: document.getElementById('fAhuUser').value.trim(),
+    ahuPass: document.getElementById('fAhuPass').value,
     catatan: document.getElementById('fCatatan').value.trim()
   };
   closeForm();
