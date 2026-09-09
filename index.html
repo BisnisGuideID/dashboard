@@ -311,6 +311,23 @@
   </div>
 </div>
 
+<div id="editCatatanOverlay" class="overlay hidden" onclick="if(event.target===this) closeEditCatatan()">
+  <div class="modal" style="max-width: 420px;">
+    <div class="modal-header">
+      <h2>Edit catatan</h2>
+      <button class="icon-btn" onclick="closeEditCatatan()">✕</button>
+    </div>
+    <label style="display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--muted);">
+      Catatan
+      <textarea id="editCatatanInput" style="min-height:80px; resize:vertical; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:9px 10px; font-size:13.5px; outline:none; font-family:'Inter',sans-serif;" placeholder="mis. nunggu KTP klien"></textarea>
+    </label>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeEditCatatan()">Batal</button>
+      <button class="btn-primary" onclick="submitEditCatatan()">Simpan</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
 <script>
@@ -594,7 +611,10 @@ function renderTable(){
             </div>
           ` : ''}
         </div>
-        <button class="delete-btn" onclick="removeJob('${j.id}')" title="Hapus">🗑</button>
+        <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+          ${j.status === 'proses' ? `<button class="delete-btn" onclick="openEditCatatan('${j.id}')" title="Edit catatan">✎</button>` : ''}
+          <button class="delete-btn" onclick="removeJob('${j.id}')" title="Hapus">🗑</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -624,6 +644,29 @@ function copyCreds(id, type){
   showToast('Disalin ke clipboard');
 }
 
+let pendingEditId = null;
+
+function openEditCatatan(id){
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  pendingEditId = id;
+  document.getElementById('editCatatanInput').value = job.catatan || '';
+  document.getElementById('editCatatanOverlay').classList.remove('hidden');
+}
+
+function closeEditCatatan(){
+  pendingEditId = null;
+  document.getElementById('editCatatanOverlay').classList.add('hidden');
+}
+
+function submitEditCatatan(){
+  const id = pendingEditId;
+  if(!id) return;
+  const catatan = document.getElementById('editCatatanInput').value.trim();
+  closeEditCatatan();
+  callScript({ action:'update', job: { id, catatan } });
+}
+
 let pendingMigrateId = null;
 let migrateTargetJenis = 'NIB';
 let migrateCredType = 'oss'; // 'oss' | 'coretax'
@@ -650,7 +693,8 @@ function toggleStatus(id){
 
   const updated = Object.assign({}, job, {
     status: nowDone ? 'selesai' : 'proses',
-    tanggalSelesai: nowDone ? todayStr() : ''
+    tanggalSelesai: nowDone ? todayStr() : '',
+    catatan: nowDone ? 'done' : job.catatan
   });
   callScript({ action:'update', job: updated });
 }
@@ -686,7 +730,7 @@ function answerLanjut(isYes){
   if(isYes){
     openMigrateModal(id, nextJenis, credType);
   } else {
-    const updated = Object.assign({}, job, { status:'selesai', tanggalSelesai: todayStr() });
+    const updated = Object.assign({}, job, { status:'selesai', tanggalSelesai: todayStr(), catatan: 'done' });
     callScript({ action:'update', job: updated });
   }
 }
