@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tracker Kerjaan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #14181D;
+    --surface: #1C222A;
+    --border: #2A323C;
+    --text: #E8EAED;
+    --muted: #8B94A0;
+    --accent: #4F8A78;
+    --accent-dark: #0E1512;
+    --success: #5FB88C;
+    --pending: #C98A3B;
+    --danger: #D9614F;
+  }
+  * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  html, body { background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+  body { padding: 24px 20px 60px; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .eyebrow { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; }
+  h2 { font-size: 15px; font-weight: 600; margin: 0; }
+
+  button { cursor: pointer; font-family: 'Inter', sans-serif; }
+  .btn-primary {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent); color: var(--accent-dark);
+    border: none; border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size: 14px;
+  }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 9px 16px; font-size: 13.5px;
+  }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid; border-radius: 10px; padding: 14px 16px; }
+  .stat-value { font-size: 26px; font-weight: 600; line-height: 1.1; }
+  .stat-label { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .month-nav { display: flex; align-items: center; gap: 8px; }
+  .nav-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; width: 24px; height: 24px; line-height: 1; font-size: 14px; padding: 0; }
+  .month-label { font-size: 12.5px; color: var(--muted); min-width: 110px; text-align: center; display: inline-block; }
+  .chart-box { position: relative; height: 220px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .search-box { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; flex: 1 1 180px; }
+  .search-box input { background: transparent; border: none; outline: none; color: var(--text); font-size: 13.5px; width: 100%; }
+  select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; }
+
+  .empty { padding: 30px 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+  .row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 8px; border-radius: 8px; }
+  .row:hover { background: #1E252D; }
+  .row-status { background: transparent; border: none; padding: 2px; margin-top: 1px; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .row-nama { font-size: 14.5px; font-weight: 600; }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .row-dates { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .row-catatan { font-size: 12.5px; color: #B5BCC5; margin-top: 4px; font-style: italic; }
+  .creds-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .creds-text { font-size: 12px; color: var(--muted); background: var(--bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); }
+  .icon-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 12px; }
+  .copied-tag { font-size: 11px; color: var(--success); }
+  .delete-btn { background: transparent; border: none; color: var(--muted); padding: 4px; margin-top: 1px; }
+
+  .overlay { position: fixed; inset: 0; background: #0A0C0FCC; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--muted); }
+  .form-grid input, .form-grid select, .form-grid textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 9px 10px; font-size: 13.5px; outline: none; font-family: 'Inter', sans-serif;
+  }
+  .full { grid-column: 1 / -1; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  .config-screen { max-width: 480px; margin: 80px auto; text-align: center; }
+  .config-screen input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin: 16px 0; outline: none; }
+  .config-screen p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #3A2A1A; border: 1px solid var(--pending); color: #E8C9A0; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="configScreen" class="config-screen hidden">
+  <div class="eyebrow">Tracker Kerjaan</div>
+  <h1>Sambungkan ke Google Sheets</h1>
+  <p>Paste URL Web App dari Apps Script (Deploy &gt; New deployment &gt; Web app). Data akan tersimpan langsung di Sheet kamu.</p>
+  <input id="scriptUrlInput" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+  <button class="btn-primary" style="margin: 0 auto;" onclick="saveConfig()">Simpan & Mulai</button>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header>
+    <div>
+      <div class="eyebrow">Tracker Pengerjaan</div>
+      <h1>NIB · PT Perorangan · NPWP</h1>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-ghost" onclick="openConfig()">Ganti Sheet</button>
+      <button class="btn-primary" onclick="openForm()">+ Tambah kerjaan</button>
+    </div>
+  </header>
+
+  <div class="stats-row">
+    <div class="stat-card" style="border-top-color: var(--success);">
+      <div class="stat-value mono" id="statHariIni" style="color: var(--success);">0</div>
+      <div class="stat-label">Selesai hari ini</div>
+    </div>
+    <div class="stat-card" style="border-top-color: #6B7FB0;">
+      <div class="stat-value mono" id="statBulanIni" style="color: #6B7FB0;">0</div>
+      <div class="stat-label" id="statBulanLabel">Selesai bulan ini</div>
+    </div>
+    <div class="stat-card" style="border-top-color: var(--pending);">
+      <div class="stat-value mono" id="statProses" style="color: var(--pending);">0</div>
+      <div class="stat-label">Sedang berjalan</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chart-header">
+      <h2>Selesai per jenis layanan</h2>
+      <div class="month-nav">
+        <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
+        <span class="mono month-label" id="monthLabel"></span>
+        <button class="nav-btn" onclick="shiftMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="chart-box"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="filter-row">
+      <div class="search-box">
+        <span style="color: var(--muted); font-size: 13px;">🔍</span>
+        <input id="searchInput" placeholder="Cari nama klien..." oninput="renderTable()" />
+      </div>
+      <select id="statusFilter" onchange="renderTable()">
+        <option value="semua">Semua status</option>
+        <option value="proses">Proses</option>
+        <option value="selesai">Selesai</option>
+      </select>
+      <select id="jenisFilter" onchange="renderTable()">
+        <option value="semua">Semua jenis</option>
+      </select>
+    </div>
+    <div id="tableBox"></div>
+  </div>
+</div>
+
+<div id="formOverlay" class="overlay hidden" onclick="if(event.target===this) closeForm()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Tambah kerjaan</h2>
+      <button class="icon-btn" onclick="closeForm()">✕</button>
+    </div>
+    <div class="form-grid">
+      <label class="full">Nama klien
+        <input id="fNama" placeholder="Nama klien / usaha" />
+      </label>
+      <label>Jenis layanan
+        <select id="fJenis" onchange="toggleJenisCustom()">
+          <option>NIB</option>
+          <option>PT Perorangan</option>
+          <option>NPWP</option>
+          <option>PT PMA</option>
+          <option>CV</option>
+          <option>Lainnya</option>
+        </select>
+      </label>
+      <label id="fJenisCustomWrap" class="hidden">Jenis lainnya
+        <input id="fJenisCustom" placeholder="mis. Perubahan Akta" />
+      </label>
+      <label>Tanggal masuk
+        <input id="fTanggalMasuk" type="date" />
+      </label>
+      <label>Status
+        <select id="fStatus">
+          <option value="proses">Proses</option>
+          <option value="selesai">Selesai</option>
+        </select>
+      </label>
+      <div class="full" style="border-top: 1px solid var(--border); margin: 4px 0;"></div>
+      <label>User OSS
+        <input id="fOssUser" placeholder="username OSS" />
+      </label>
+      <label>Password OSS
+        <input id="fOssPass" placeholder="password OSS" />
+      </label>
+      <label class="full">Catatan
+        <textarea id="fCatatan" style="min-height:60px; resize:vertical;" placeholder="mis. nunggu KTP klien"></textarea>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeForm()">Batal</button>
+      <button class="btn-primary" onclick="submitForm()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const JENIS_COLOR = {
+  "NIB": "#4F8A78", "PT Perorangan": "#C98A3B", "NPWP": "#6B7FB0",
+  "PT PMA": "#A6604C", "CV": "#7A8B5A", "Lainnya": "#8B94A0"
+};
+const JENIS_OPTIONS = Object.keys(JENIS_COLOR);
+
+let scriptUrl = "";
+let jobs = [];
+let monthCursor = new Date().toISOString().slice(0,7);
+let chartInstance = null;
+let visiblePw = {};
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtTanggal(iso){
+  if(!iso) return "-";
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+}
+function monthKey(iso){ return iso ? iso.slice(0,7) : ""; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'), 2200);
+}
+
+// Pakai window.storage kalau tersedia (di dalam Claude), kalau tidak fallback ke localStorage browser
+// (dipakai saat file ini dibuka langsung / di-hosting sendiri di luar Claude).
+const hasClaudeStorage = typeof window.storage !== 'undefined';
+
+async function getStoredUrl(){
+  if(hasClaudeStorage){
+    try {
+      const res = await window.storage.get('scriptUrl', false);
+      return res && res.value ? res.value : null;
+    } catch(e){
+      return null;
+    }
+  }
+  try {
+    return localStorage.getItem('scriptUrl');
+  } catch(e){
+    return null;
+  }
+}
+
+async function setStoredUrl(url){
+  if(hasClaudeStorage){
+    try { await window.storage.set('scriptUrl', url, false); } catch(e){}
+    return;
+  }
+  try { localStorage.setItem('scriptUrl', url); } catch(e){}
+}
+
+async function init(){
+  const stored = await getStoredUrl();
+  if(stored){
+    scriptUrl = stored;
+    document.getElementById('app').classList.remove('hidden');
+    await loadJobs();
+  } else {
+    openConfig();
+  }
+}
+
+function openConfig(){
+  document.getElementById('configScreen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('scriptUrlInput').value = scriptUrl || "";
+}
+
+async function saveConfig(){
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if(!url) return;
+  scriptUrl = url;
+  await setStoredUrl(url);
+  document.getElementById('configScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  await loadJobs();
+}
+
+async function loadJobs(){
+  document.getElementById('tableBox').innerHTML = '<div class="empty">Memuat data dari Sheets...</div>';
+  try {
+    const res = await fetch(scriptUrl);
+    jobs = await res.json();
+  } catch(e){
+    showToast('Gagal ambil data — cek URL script atau koneksi.');
+    jobs = [];
+  }
+  renderAll();
+}
+
+async function callScript(payload){
+  try {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    jobs = await res.json();
+    renderAll();
+  } catch(e){
+    showToast('Gagal menyimpan — cek koneksi lalu coba lagi.');
+  }
+}
+
+function renderAll(){
+  renderStats();
+  renderChart();
+  renderTable();
+}
+
+function renderStats(){
+  const today = todayStr();
+  const thisMonth = today.slice(0,7);
+  const selesaiHariIni = jobs.filter(j=>j.status==='selesai' && j.tanggalSelesai===today).length;
+  const selesaiBulanIni = jobs.filter(j=>j.status==='selesai' && monthKey(j.tanggalSelesai)===thisMonth).length;
+  const proses = jobs.filter(j=>j.status==='proses').length;
+  document.getElementById('statHariIni').textContent = selesaiHariIni;
+  document.getElementById('statBulanIni').textContent = selesaiBulanIni;
+  document.getElementById('statProses').textContent = proses;
+}
+
+function shiftMonth(delta){
+  const [y,m] = monthCursor.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  monthCursor = d.toISOString().slice(0,7);
+  renderChart();
+}
+
+function renderChart(){
+  const counts = {};
+  JENIS_OPTIONS.forEach(j=>counts[j]=0);
+  jobs.forEach(j=>{
+    if(j.status==='selesai' && monthKey(j.tanggalSelesai)===monthCursor){
+      counts[j.jenis] = (counts[j.jenis]||0)+1;
+    }
+  });
+  const labels = Object.keys(counts);
+  const data = Object.values(counts);
+  const colors = labels.map(l=>JENIS_COLOR[l]||'#8B94A0');
+
+  const monthLabel = new Date(monthCursor+"-01T00:00:00").toLocaleDateString("id-ID",{month:"long",year:"numeric"});
+  document.getElementById('monthLabel').textContent = monthLabel;
+  document.getElementById('statBulanLabel').textContent = (monthCursor === todayStr().slice(0,7)) ? 'Selesai bulan ini' : 'Selesai ' + monthLabel;
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, barThickness: 36 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor:'#1C222A', borderColor:'#2A323C', borderWidth:1, titleColor:'#E8EAED', bodyColor:'#E8EAED' } },
+      scales: {
+        x: { grid: { display:false, color:'#2A323C' }, ticks: { color:'#8B94A0', font:{size:12} } },
+        y: { beginAtZero:true, ticks: { color:'#8B94A0', font:{size:12}, precision:0 }, grid: { color:'#2A323C' } }
+      }
+    }
+  });
+}
+
+function renderTable(){
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const statusFilter = document.getElementById('statusFilter').value;
+  const jenisFilter = document.getElementById('jenisFilter').value;
+
+  // populate jenis filter options once
+  const jf = document.getElementById('jenisFilter');
+  if(jf.options.length <= 1){
+    JENIS_OPTIONS.forEach(j=>{
+      const opt = document.createElement('option');
+      opt.value = j; opt.textContent = j;
+      jf.appendChild(opt);
+    });
+  }
+
+  const filtered = jobs.filter(j=>{
+    if(statusFilter!=='semua' && j.status!==statusFilter) return false;
+    if(jenisFilter!=='semua' && j.jenis!==jenisFilter) return false;
+    if(search && !(j.nama||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const box = document.getElementById('tableBox');
+  if(filtered.length===0){
+    box.innerHTML = `<div class="empty">${jobs.length===0 ? 'Belum ada kerjaan. Tambah yang pertama.' : 'Tidak ada yang cocok dengan filter.'}</div>`;
+    return;
+  }
+
+  box.innerHTML = filtered.map(j=>{
+    const color = JENIS_COLOR[j.jenis] || '#8B94A0';
+    const isDone = j.status==='selesai';
+    const dates = `Masuk ${fmtTanggal(j.tanggalMasuk)}` + (isDone ? ` · Selesai ${fmtTanggal(j.tanggalSelesai)}` : '');
+    const hasCreds = j.ossUser || j.ossPass;
+    const pwShown = visiblePw[j.id];
+    return `
+      <div class="row">
+        <button class="row-status" onclick="toggleStatus('${j.id}')" title="Tandai selesai/proses">
+          <span style="font-size:18px; color:${isDone ? 'var(--success)' : 'var(--pending)'};">${isDone ? '●' : '○'}</span>
+        </button>
+        <div class="row-main">
+          <div class="row-top">
+            <span class="row-nama">${escapeHtml(j.nama)}</span>
+            <span class="badge" style="background:${color}26; color:${color};">${escapeHtml(j.jenis)}</span>
+          </div>
+          <div class="row-dates mono">${dates}</div>
+          ${j.catatan ? `<div class="row-catatan">${escapeHtml(j.catatan)}</div>` : ''}
+          ${hasCreds ? `
+            <div class="creds-row">
+              <span class="creds-text mono">${escapeHtml(j.ossUser||'-')} / ${pwShown ? escapeHtml(j.ossPass||'-') : '••••••••'}</span>
+              <button class="icon-btn" onclick="togglePw('${j.id}')" title="Tampilkan/sembunyikan">${pwShown ? '🙈' : '👁'}</button>
+              <button class="icon-btn" onclick="copyCreds('${j.id}')" title="Salin">⧉</button>
+            </div>
+          ` : ''}
+        </div>
+        <button class="delete-btn" onclick="removeJob('${j.id}')" title="Hapus">🗑</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str==null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function togglePw(id){
+  visiblePw[id] = !visiblePw[id];
+  renderTable();
+}
+
+function copyCreds(id){
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  const text = `User: ${job.ossUser}\nPassword: ${job.ossPass}`;
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
+  showToast('Disalin ke clipboard');
+}
+
+function toggleStatus(id){
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  const nowDone = job.status !== 'selesai';
+  const updated = Object.assign({}, job, {
+    status: nowDone ? 'selesai' : 'proses',
+    tanggalSelesai: nowDone ? todayStr() : ''
+  });
+  callScript({ action:'update', job: updated });
+}
+
+function removeJob(id){
+  if(!confirm('Hapus kerjaan ini?')) return;
+  callScript({ action:'delete', id });
+}
+
+function openForm(){
+  document.getElementById('fNama').value='';
+  document.getElementById('fJenis').value='NIB';
+  document.getElementById('fJenisCustom').value='';
+  document.getElementById('fJenisCustomWrap').classList.add('hidden');
+  document.getElementById('fTanggalMasuk').value=todayStr();
+  document.getElementById('fStatus').value='proses';
+  document.getElementById('fOssUser').value='';
+  document.getElementById('fOssPass').value='';
+  document.getElementById('fCatatan').value='';
+  document.getElementById('formOverlay').classList.remove('hidden');
+}
+function closeForm(){ document.getElementById('formOverlay').classList.add('hidden'); }
+
+function toggleJenisCustom(){
+  const isLainnya = document.getElementById('fJenis').value === 'Lainnya';
+  document.getElementById('fJenisCustomWrap').classList.toggle('hidden', !isLainnya);
+}
+
+function submitForm(){
+  const nama = document.getElementById('fNama').value.trim();
+  if(!nama) return;
+  let jenis = document.getElementById('fJenis').value;
+  if(jenis==='Lainnya'){
+    jenis = document.getElementById('fJenisCustom').value.trim() || 'Lainnya';
+  }
+  const status = document.getElementById('fStatus').value;
+  const job = {
+    id: uid(),
+    nama,
+    jenis,
+    tanggalMasuk: document.getElementById('fTanggalMasuk').value || todayStr(),
+    tanggalSelesai: status==='selesai' ? todayStr() : '',
+    status,
+    ossUser: document.getElementById('fOssUser').value.trim(),
+    ossPass: document.getElementById('fOssPass').value,
+    catatan: document.getElementById('fCatatan').value.trim()
+  };
+  closeForm();
+  callScript({ action:'add', job });
+}
+
+init();
+</script>
+</body>
+</html>
