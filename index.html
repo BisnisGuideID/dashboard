@@ -427,12 +427,9 @@ function renderAll(){
 
 function renderStats(){
   const today = todayStr();
-  const thisMonth = today.slice(0,7);
   const selesaiHariIni = jobs.filter(j=>j.status==='selesai' && j.tanggalSelesai===today).length;
-  const selesaiBulanIni = jobs.filter(j=>j.status==='selesai' && monthKey(j.tanggalSelesai)===thisMonth).length;
   const proses = jobs.filter(j=>j.status==='proses').length;
   document.getElementById('statHariIni').textContent = selesaiHariIni;
-  document.getElementById('statBulanIni').textContent = selesaiBulanIni;
   document.getElementById('statProses').textContent = proses;
 }
 
@@ -443,6 +440,7 @@ function shiftMonth(delta){
   else if(m > 12){ m = 1; y += 1; }
   monthCursor = `${y}-${String(m).padStart(2,'0')}`;
   renderChart();
+  renderTable();
 }
 
 function renderChart(){
@@ -456,9 +454,13 @@ function renderChart(){
   const labels = Object.keys(counts);
   const data = Object.values(counts);
   const colors = labels.map(l=>JENIS_COLOR[l]||'#8B94A0');
+  const total = data.reduce((a,b)=>a+b,0);
 
+  const isCurrentMonth = monthCursor === todayStr().slice(0,7);
   const monthLabel = new Date(monthCursor+"-01T00:00:00").toLocaleDateString("id-ID",{month:"long",year:"numeric"});
   document.getElementById('monthLabel').textContent = monthLabel;
+  document.getElementById('statBulanIni').textContent = total;
+  document.getElementById('statBulanLabel').textContent = isCurrentMonth ? 'Selesai bulan ini' : 'Selesai ' + monthLabel;
 
   const ctx = document.getElementById('chart').getContext('2d');
   if(chartInstance){
@@ -500,7 +502,7 @@ function renderTable(){
 
   const filtered = jobs.filter(j=>{
     if(quickFilter === 'hariIni' && !(j.status==='selesai' && j.tanggalSelesai===todayStr())) return false;
-    if(quickFilter === 'bulanIni' && !(j.status==='selesai' && monthKey(j.tanggalSelesai)===todayStr().slice(0,7))) return false;
+    if(quickFilter === 'bulanIni' && !(j.status==='selesai' && monthKey(j.tanggalSelesai)===monthCursor)) return false;
     if(quickFilter === 'proses' && j.status !== 'proses') return false;
     if(statusFilter!=='semua' && j.status!==statusFilter) return false;
     if(jenisFilter!=='semua' && j.jenis!==jenisFilter) return false;
