@@ -119,6 +119,7 @@
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-ghost" onclick="openConfig()">Ganti Sheet</button>
+      <button class="btn-ghost" onclick="openPelunasan()">+ Pelunasan</button>
       <button class="btn-primary" onclick="openForm()">+ Tambah kerjaan</button>
     </div>
   </header>
@@ -324,6 +325,52 @@
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeEditCatatan()">Batal</button>
       <button class="btn-primary" onclick="submitEditCatatan()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="pelunasanOverlay" class="overlay hidden" onclick="if(event.target===this) closePelunasan()">
+  <div class="modal" style="max-width: 520px;">
+    <div class="modal-header">
+      <h2>Pelunasan — Serah Terima Akun</h2>
+      <button class="icon-btn" onclick="closePelunasan()">✕</button>
+    </div>
+    <div class="form-grid">
+      <label class="full">Pilih PT/CV
+        <select id="pJobSelect" onchange="onPelunasanClientChange()">
+          <option value="">-- pilih klien --</option>
+        </select>
+      </label>
+      <label class="full">Email
+        <input id="pEmail" placeholder="email@domain.com" />
+      </label>
+      <label class="full">Password Email (opsional)
+        <input id="pEmailPass" placeholder="password email" />
+      </label>
+      <label>User OSS
+        <input id="pOssUser" placeholder="username OSS" />
+      </label>
+      <label>Password OSS
+        <input id="pOssPass" placeholder="password OSS" />
+      </label>
+      <label>User Coretax
+        <input id="pCoretaxUser" placeholder="username Coretax" />
+      </label>
+      <label>Password Coretax
+        <input id="pCoretaxPass" placeholder="password Coretax" />
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closePelunasan()">Batal</button>
+      <button class="btn-primary" onclick="generatePelunasanText()">Generate Teks</button>
+    </div>
+
+    <div id="pelunasanResultWrap" class="hidden" style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:12.5px; color:var(--muted);">Teks siap kirim</span>
+        <button class="icon-btn" onclick="copyPelunasanText()" title="Salin">⧉</button>
+      </div>
+      <textarea id="pelunasanResult" readonly style="width:100%; min-height:220px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:10px; font-size:13px; font-family:'IBM Plex Mono',monospace; resize:vertical;"></textarea>
     </div>
   </div>
 </div>
@@ -642,6 +689,73 @@ function copyCreds(id, type){
   const text = `User: ${user}\nPassword: ${pass}`;
   if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
   showToast('Disalin ke clipboard');
+}
+
+function openPelunasan(){
+  const sel = document.getElementById('pJobSelect');
+  sel.innerHTML = '<option value="">-- pilih klien --</option>' +
+    jobs.map(j=>`<option value="${j.id}">${escapeHtml(j.nama)} (${escapeHtml(j.jenis)})</option>`).join('');
+  ['pEmail','pEmailPass','pOssUser','pOssPass','pCoretaxUser','pCoretaxPass'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('pelunasanResultWrap').classList.add('hidden');
+  document.getElementById('pelunasanOverlay').classList.remove('hidden');
+}
+
+function closePelunasan(){
+  document.getElementById('pelunasanOverlay').classList.add('hidden');
+}
+
+function onPelunasanClientChange(){
+  const id = document.getElementById('pJobSelect').value;
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  document.getElementById('pEmail').value = job.email || '';
+  document.getElementById('pEmailPass').value = job.emailPass || '';
+  document.getElementById('pOssUser').value = job.ossUser || '';
+  document.getElementById('pOssPass').value = job.ossPass || '';
+  document.getElementById('pCoretaxUser').value = job.coretaxUser || '';
+  document.getElementById('pCoretaxPass').value = job.coretaxPass || '';
+}
+
+function generatePelunasanText(){
+  const id = document.getElementById('pJobSelect').value;
+  const job = jobs.find(j=>j.id===id);
+  if(!job){ showToast('Pilih klien dulu'); return; }
+
+  const email = document.getElementById('pEmail').value.trim();
+  const emailPass = document.getElementById('pEmailPass').value;
+  const ossUser = document.getElementById('pOssUser').value.trim();
+  const ossPass = document.getElementById('pOssPass').value;
+  const coretaxUser = document.getElementById('pCoretaxUser').value.trim();
+  const coretaxPass = document.getElementById('pCoretaxPass').value;
+
+  const text = `Dear ${job.nama},
+
+Berikut Softfile Legalitas Perusahaan dan dokumen lainnya, berikut juga terlampir akun OSS dan akun coretax
+
+Email           :  ${email || '-'}${emailPass ? `
+Pass            :  ${emailPass}` : ''}
+User OSS     :  ${ossUser || '-'}
+Pass OSS      :  ${ossPass || '-'}
+
+Akun Coretax
+User : ${coretaxUser || '-'}
+Pass : ${coretaxPass || '-'}
+
+Terima Kasih`;
+
+  document.getElementById('pelunasanResult').value = text;
+  document.getElementById('pelunasanResultWrap').classList.remove('hidden');
+
+  // simpan email & kredensial ke data klien biar kepake otomatis lain kali
+  callScript({ action:'update', job: { id: job.id, email, emailPass, ossUser, ossPass, coretaxUser, coretaxPass } });
+}
+
+function copyPelunasanText(){
+  const text = document.getElementById('pelunasanResult').value;
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
+  showToast('Teks disalin ke clipboard');
 }
 
 let pendingEditId = null;
