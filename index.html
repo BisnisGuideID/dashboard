@@ -714,8 +714,10 @@ function onPelunasanClientChange(){
   document.getElementById('pEmailPass').value = job.emailPass || '';
   document.getElementById('pOssUser').value = job.ossUser || '';
   document.getElementById('pOssPass').value = job.ossPass || '';
-  document.getElementById('pCoretaxUser').value = job.coretaxUser || '';
-  document.getElementById('pCoretaxPass').value = job.coretaxPass || '';
+  // User/Password Coretax di form ini beda dari akun Coretax PIC yang dipakai buat PKP,
+  // jadi sengaja tidak di-prefill dari database — selalu diisi manual.
+  document.getElementById('pCoretaxUser').value = '';
+  document.getElementById('pCoretaxPass').value = '';
 }
 
 function generatePelunasanText(){
@@ -748,8 +750,10 @@ Terima Kasih`;
   document.getElementById('pelunasanResult').value = text;
   document.getElementById('pelunasanResultWrap').classList.remove('hidden');
 
-  // simpan email & kredensial ke data klien biar kepake otomatis lain kali
-  callScript({ action:'update', job: { id: job.id, email, emailPass, ossUser, ossPass, coretaxUser, coretaxPass } });
+  // Cuma email & password email PT yang disimpan balik ke database.
+  // User/Password OSS & Coretax di form ini tidak ditulis ulang ke Sheets —
+  // OSS cuma ditampilkan dari data yang sudah ada, Coretax di sini akun beda (bukan akun PIC untuk PKP).
+  callScript({ action:'update', job: { id: job.id, email, emailPass } });
 }
 
 function copyPelunasanText(){
